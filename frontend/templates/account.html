@@ -1,0 +1,16 @@
+<link rel="stylesheet" href="/static/style.css" type="text/css">
+{% block body %}
+{% if session['logged_in'] %}
+<p>Account Info</p>
+
+<p>  UserName = {{ username}} </p>
+<p>  Email = {{ email }}</p>
+<p> Phone = {{ phone }} </p>
+
+{% else %}
+ 
+
+
+
+{% endif %}
+{% endblock %}
