@@ -20,10 +20,15 @@ times = eval(os.environ['times'])
 #Sat 6 Sunday 7
 #days = [ 6, 7]
 days = eval(os.environ['days'])
-full_results = {}
+
+
 
 
 def my_handler(event, context):
+
+    resultsCombined = ""
+    resultsSouth = {}
+    resultsNorth = {}
 
     logincookie = login()
     resultsSouth = getTimes(logincookie,teetimesurl.get("South"),"south",times)
@@ -38,18 +43,19 @@ def my_handler(event, context):
 
     #print results
     #print json.dumps(results)
-    resultsCombined = ""
+    
     if ( len(resultsSouth) != 0):
         #print "results are greater 0 " + str(resultsSouth)
         #pubSNS(resultsSouth,"arn:aws:sns:us-west-2:584679212105:notifications")
         for k,v in resultsSouth.iteritems():
             #print "Tee Times for " + str(k) + " Times " + json.dumps(v)
             myDate = datetime.strptime(k, "%m-%d-%Y" )
-            if myDate.weekday() == 6 or myDate.weekday() == 7 :
+            if myDate.weekday() in days :
                 resultsCombined = resultsCombined +  "    Torrey Pines South Tee Times: " + str( calendar.day_name[myDate.weekday()])
+                
 
                 for k2,v2 in v.iteritems():
-                    resultsCombined = resultsCombined +  "  " + str(k2) + " Spots: " + str(v2) + " "
+                    resultsCombined = resultsCombined +  "  " + str(k2) + " Spots: " + str(v2) + "    "
                     #print str(k2) + str(v2)
 
         #print resultsCombined
@@ -57,13 +63,14 @@ def my_handler(event, context):
     if ( len(resultsNorth) != 0):
         for k,v in resultsNorth.iteritems():
             myDate = datetime.strptime(k, "%m-%d-%Y" )
-            if myDate.weekday() == 6 or myDate.weekday() == 7 :
+            if myDate.weekday() in days :
                 resultsCombined = resultsCombined +  "    Torrey Pines North Tee Times: " +  str( calendar.day_name[myDate.weekday()])
 
                 for k2,v2 in v.iteritems():
-                    resultsCombined = resultsCombined + "  " + str(k2) + " Spots: " + str(v2) + " "
+                    resultsCombined = resultsCombined + "  " + str(k2) + " Spots: " + str(v2) + "    "
         
     if resultsCombined:
+        resultsCombined = resultsCombined + "                                       http://foreupsoftware.com/index.php/booking/index/19347"
         pubSNS(resultsCombined,'arn:aws:sns:us-west-2:584679212105:notifications')
 
 
@@ -100,6 +107,7 @@ def getTimes(cookie,courseurl,course,times):
 
     count = 0
     results={}
+    full_results = {}
     #Loops through the next 7 days for tee times
     while (count < 8):
         
@@ -211,4 +219,4 @@ def getBucketData(key):
 
     return data
 
-my_handler("event", "one")
+#my_handler("event", "one")
