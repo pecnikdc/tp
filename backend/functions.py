@@ -10,6 +10,8 @@ teetimesurl = {"South" : "https://foreupsoftware.com/index.php/api/booking/times
             }
 loginurl = "https://foreupsoftware.com/index.php/api/booking/users/login"
 
+sessionurl = "https://foreupsoftware.com/index.php/booking/index/19347"
+
 username = os.environ['username']
 password = os.environ['password']
 
@@ -51,7 +53,7 @@ def my_handler(event, context):
             #print "Tee Times for " + str(k) + " Times " + json.dumps(v)
             myDate = datetime.strptime(k, "%m-%d-%Y" )
             if myDate.weekday() in days :
-                resultsCombined = resultsCombined +  "    Torrey Pines South Tee Times: " + str( calendar.day_name[myDate.weekday()])
+                resultsCombined = resultsCombined +  "Torrey Pines South Tee Times: " + str( calendar.day_name[myDate.weekday()])
                 
 
                 for k2,v2 in v.iteritems():
@@ -70,30 +72,56 @@ def my_handler(event, context):
                     resultsCombined = resultsCombined + "  " + str(k2) + " Spots: " + str(v2) + "    "
         
     if resultsCombined:
-        resultsCombined = resultsCombined + "                                       http://foreupsoftware.com/index.php/booking/index/19347"
+        resultsCombined = resultsCombined + "               http://foreupsoftware.com/index.php/booking/index/19347"
         pubSNS(resultsCombined,'arn:aws:sns:us-west-2:584679212105:notifications')
 
 
-    checkUserNotifications("pecnikdc@gmail.com")
-    json_times = json.loads(str(getBucketData("teetimes/north/all")))
+    #checkUserNotifications("pecnikdc@gmail.com")
+    #json_times = json.loads(str(getBucketData("teetimes/north/all")))
 
 
 def login():
     
+#Get phpsessid
+    sessid = requests.Request('GET', sessionurl)
+    s = requests.Session()
+    t = s.send(sessid.prepare())
+    print "Headers= " + str(t.headers)
+    phpid = t.cookies.get("PHPSESSID")
+
+    loginheaders = {"api_key" : "no_limits",
+                    "Content-Type" : "application/x-www-form-urlencoded; charset=UTF-8",
+                    "Accept" : "application/json, text/javascript, */*; q=0.01",
+                    "Accept-Encoding" : "gzip, deflate, br",
+                    "Accept-Language" : "en-US,en;q=0.9",
+                    "X-Requested-With" : "XMLHttpRequest"
+                    }
+    logincookies = {"PHPSESSID" : phpid}
+    print username
+    print password
+    
     data = {"username" : username,
             "password" : password,
             "booking_class_id" : "888",
-            "api_key" : "no_limits"  
+            "api_key" : "no_limits",
+            "course_id" : "19347" 
            }
 
-    r = requests.post(loginurl, data=data)
+    #r = requests.post(loginurl, data=data, headers=loginheaders)
+    req = requests.Request('POST',loginurl, data=data, headers=loginheaders, cookies=logincookies)
+    prepared = req.prepare()
+    pretty_print_POST(prepared)
+
+   # s = requests.Session()
+    r = s.send(prepared)
+    print str(r.text)
 
     token =  r.cookies.get("token")
-    phpsession = r.cookies.get("PHPSESSID")
+    #phpsession = r.cookies.get("PHPSESSID")
     cookie = {"token": token,
-              "PHPSESSID" : phpsession
+              "PHPSESSID" : phpid
         }
-
+    print "cookie =" + str(cookie)
     return cookie
 
 def getTimes(cookie,courseurl,course,times):
@@ -158,16 +186,17 @@ def getTimes(cookie,courseurl,course,times):
                 #putS3(date_formatted,t.text,course)
 
         if( len(results) != 0):
-            putS3(date_formatted,str(results),course)
+            #putS3(date_formatted,str(results),course)
             full_results.update({date_formatted: json_day})
             #pubSNS(data,'arn:aws:sns:us-west-2:584679212105:notifications')
             #print("date is: " + str(data))
             #print("Full Results is: " + str(results))
-        else:
-            deleteS3(date_formatted,course)
+        #else:
+            #deleteS3(date_formatted,course)
         
         #print str(results)
-    putS3("all",json.dumps(full_results),course)
+    #putS3("all",json.dumps(full_results),course)
+    print str(full_results)
     return full_results
 
 def pubSNS(message,arn):
@@ -218,5 +247,21 @@ def getBucketData(key):
     data = response['Body'].read().decode('utf-8')
 
     return data
+
+def pretty_print_POST(req):
+    """
+    At this point it is completely built and ready
+    to be fired; it is "prepared".
+
+    However pay attention at the formatting used in 
+    this function because it is programmed to be pretty 
+    printed and may differ from the actual request.
+    """
+    print('{}\n{}\n{}\n\n{}'.format(
+        '-----------START-----------',
+        req.method + ' ' + req.url,
+        '\n'.join('{}: {}'.format(k, v) for k, v in req.headers.items()),
+        req.body,
+    ))
 
 #my_handler("event", "one")
